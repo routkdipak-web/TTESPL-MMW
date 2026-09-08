@@ -234,7 +234,7 @@
               </div>
               <div class="col-6">
                 <label class="form-label small mb-0">Dated</label>
-                <input type="text" id="invDate" class="form-control form-control-sm" value="4-Sep-26" oninput="updateInvoicePreview()">
+                <input type="text" id="invDate" class="form-control form-control-sm" value="9-Sep-26" oninput="updateInvoicePreview()">
               </div>
             </div>
           </div>
@@ -271,7 +271,7 @@
               </div>
             </div>
             <button class="btn btn-primary btn-sm w-100 mb-2" onclick="addItemToInvoice()"><i class="fa fa-plus"></i> Add Item to Bill</button>
-            <button id="savePdfBtn" class="btn btn-success btn-sm w-100 fw-bold" onclick="printInvoicePDF()"><i class="fa fa-download"></i> Save as PDF / Print</button>
+            <button id="savePdfBtn" class="btn btn-success btn-sm w-100 fw-bold" onclick="printInvoicePDF()"><i class="fa fa-file-pdf"></i> Save / Export PDF</button>
           </div>
         </div>
 
@@ -303,7 +303,7 @@
                           Invoice No.<br><strong id="invDisplayNo">TTESPL/24/26-27</strong>
                         </td>
                         <td style="border-bottom: 1px solid #000; border-top: none; border-right: none; padding: 2px 4px;">
-                          Dated<br><strong id="invDisplayDate">4-Sep-26</strong>
+                          Dated<br><strong id="invDisplayDate">9-Sep-26</strong>
                         </td>
                       </tr>
                       <tr>
@@ -336,22 +336,22 @@
                 <tr>
                   <td style="vertical-align: top; line-height: 1.25; padding: 2px 4px; border-left: none;">
                     Consignee (Ship to)<br>
-                    <strong id="billConsigneeName">Sattva Engineering Services</strong><br>
-                    <span id="billConsigneeAddress">Plot No-420, Saheed Nagar, Near Omc Bda Park, Khordha</span><br>
-                    GSTIN/UIN &nbsp;&nbsp;: <strong id="billConsigneeGstin">21AFTFS5991N1Z0</strong><br>
+                    <strong id="billConsigneeName">M/S Maa Tara Sales & Services</strong><br>
+                    <span id="billConsigneeAddress">PLOT NO-11/817, SUBUDHIPUR, TAMANDO, BHUBANESWAR, Khordha, 752054</span><br>
+                    GSTIN/UIN &nbsp;&nbsp;: <strong id="billConsigneeGstin">21AWXPP2552K2Z1</strong><br>
                     State Name &nbsp;: Odisha, Code : 21
                   </td>
                   <td style="vertical-align: top; line-height: 1.25; padding: 2px 4px; border-right: none;">
                     Buyer (Bill to)<br>
-                    <strong id="billBuyerName">Sattva Engineering Services</strong><br>
-                    <span id="billBuyerAddress">Plot No-420, Saheed Nagar, Near Omc Bda Park, Khordha</span><br>
-                    GSTIN/UIN &nbsp;&nbsp;: <strong id="billBuyerGstin">21AFTFS5991N1Z0</strong><br>
+                    <strong id="billBuyerName">M/S Maa Tara Sales & Services</strong><br>
+                    <span id="billBuyerAddress">PLOT NO-11/817, SUBUDHIPUR, TAMANDO, BHUBANESWAR, Khordha, 752054</span><br>
+                    GSTIN/UIN &nbsp;&nbsp;: <strong id="billBuyerGstin">21AWXPP2552K2Z1</strong><br>
                     State Name &nbsp;: Odisha, Code : 21
                   </td>
                 </tr>
               </table>
 
-              <!-- 2. Products Section (Compact & Clean) -->
+              <!-- 2. Products Section -->
               <table class="tally-tbl border-top-none" style="margin-top: -1px; border-left: none; border-right: none;">
                 <thead>
                   <tr>
@@ -472,24 +472,13 @@ let masterDB = JSON.parse(localStorage.getItem('MMW_APP_DB')) || [
   { 
     id: "CUST-1", 
     type: "Customer", 
-    name: "Sambal Autocare Private Limited", 
+    name: "M/S Maa Tara Sales & Services", 
     category: "Khordha", 
-    hsn: "21ABBCS2077B1ZD", 
+    hsn: "21AWXPP2552K2Z1", 
     price: 0, 
     gst: 18, 
-    desc: "Plot No-433, 4th Floor, Plot No-714, Gali No-1, Near Hotel Royal Chanakya, Bharatpur, Bhubaneswar, Odisha 751019", 
-    specs: "Mobile: 9437012345" 
-  },
-  { 
-    id: "CUST-2", 
-    type: "Customer", 
-    name: "Sattva Engineering Services", 
-    category: "Khordha", 
-    hsn: "21AFTFS5991N1Z0", 
-    price: 0, 
-    gst: 18, 
-    desc: "Plot No-420, Saheed Nagar, Near Omc Bda Park, Khordha", 
-    specs: "Mobile: 9437012345" 
+    desc: "PLOT NO-11/817, SUBUDHIPUR, TAMANDO, BHUBANESWAR, Khordha, 752054", 
+    specs: "Mobile: 7326869628" 
   },
   { 
     id: "CHM-1", 
@@ -512,12 +501,48 @@ let masterDB = JSON.parse(localStorage.getItem('MMW_APP_DB')) || [
     gst: 18, 
     desc: "Multi-surface dashboard & tyre dresser 5 Litre", 
     specs: "Pack: 5 Litre" 
+  },
+  { 
+    id: "CAT-1", 
+    type: "Catalog", 
+    name: "AR-680 (1Φ)", 
+    category: "High Pressure Car Washer", 
+    hsn: "84243000", 
+    price: 54944, 
+    gst: 18, 
+    desc: "High quality compact car washer", 
+    specs: "10 l/min | 150 bar" 
+  },
+  { 
+    id: "CAT-2", 
+    type: "Catalog", 
+    name: "AR-680K (1Φ)", 
+    category: "High Pressure Car Washer", 
+    hsn: "84243000", 
+    price: 66310, 
+    gst: 18, 
+    desc: "Trolley washer", 
+    specs: "10 l/min | 150 bar" 
+  },
+  { 
+    id: "CAT-3", 
+    type: "Catalog", 
+    name: "HRC PRO 11.11 ET (1Φ)", 
+    category: "High Pressure Car Washer", 
+    hsn: "84243000", 
+    price: 96833, 
+    gst: 18, 
+    desc: "Plunger pump washer", 
+    specs: "11 l/min | 140 bar" 
   }
 ];
 
 let invoiceItems = [
   { name: "SNOW FOAM SHAMPOO 5 LTR", hsn: "34029011", gst: 18, qty: 1, rate: 918.00, disc: 0, unit: "PICES" },
-  { name: "4 IN DRESSER 5 LTR", hsn: "34059090", gst: 18, qty: 1, rate: 1925.00, disc: 0, unit: "PICES" }
+  { name: "4 IN DRESSER 5 LTR", hsn: "34059090", gst: 18, qty: 1, rate: 1925.00, disc: 0, unit: "PICES" },
+  { name: "AR-680 (1Φ)", hsn: "84243000", gst: 18, qty: 1, rate: 54944.00, disc: 0, unit: "PICES" },
+  { name: "AR-680K (1Φ)", hsn: "84243000", gst: 18, qty: 1, rate: 66310.00, disc: 0, unit: "PICES" },
+  { name: "HRC PRO 11.11 ET (1Φ)", hsn: "84243000", gst: 18, qty: 1, rate: 96833.00, disc: 0, unit: "PICES" }
 ];
 
 function initApp() {
@@ -778,32 +803,59 @@ function updateInvoicePreview() {
   document.getElementById('invDisplayDate').innerText = document.getElementById('invDate').value;
 }
 
-// DIRECT MOBILE APK PDF GENERATOR (Guaranteed to work in Android WebViews)
-function printInvoicePDF() {
+// 100% WORKING MOBILE APK PDF EXPORTER (NATIVE BLOB + INTENT SHARE FALLBACK)
+async function printInvoicePDF() {
   const btn = document.getElementById('savePdfBtn');
   btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Generating PDF...';
   btn.disabled = true;
 
   const element = document.getElementById('invoiceCaptureSection');
-  const invNumber = document.getElementById('invNo').value.replace(/[\/\\:]/g, '_');
+  const rawNo = document.getElementById('invNo').value.trim();
+  const safeInvNo = rawNo.replace(/[\/\\?%*:|"<>]/g, '_');
+  const fileName = `Invoice_${safeInvNo}.pdf`;
 
   const opt = {
-    margin:       [5, 6, 5, 6],
-    filename:     `Tax_Invoice_${invNumber}.pdf`,
+    margin:       [4, 6, 4, 6],
+    filename:     fileName,
     image:        { type: 'jpeg', quality: 0.98 },
     html2canvas:  { scale: 2, useCORS: true, letterRendering: true },
     jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
   };
 
-  html2pdf().set(opt).from(element).save().then(() => {
-    btn.innerHTML = '<i class="fa fa-download"></i> Save as PDF / Print';
-    btn.disabled = false;
-  }).catch(err => {
-    console.error("html2pdf failed, attempting window.print()", err);
+  try {
+    // Generate PDF Blob directly
+    const pdfBlob = await html2pdf().set(opt).from(element).outputPdf('blob');
+    const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
+
+    // 1. First Priority: Mobile Native Share Sheet (Save to Device, WhatsApp, PDF Viewer)
+    if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+      await navigator.share({
+        files: [pdfFile],
+        title: fileName,
+        text: 'Tax Invoice: ' + rawNo
+      });
+    } else {
+      // 2. Second Priority: Explicit Blob Object Download
+      const fileURL = URL.createObjectURL(pdfBlob);
+      const downloadLink = document.createElement('a');
+      downloadLink.href = fileURL;
+      downloadLink.download = fileName;
+      downloadLink.setAttribute('target', '_blank');
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      
+      setTimeout(() => {
+        document.body.removeChild(downloadLink);
+        URL.revokeObjectURL(fileURL);
+      }, 3000);
+    }
+  } catch (err) {
+    console.error("PDF export fallback triggering window.print()", err);
     window.print();
-    btn.innerHTML = '<i class="fa fa-download"></i> Save as PDF / Print';
+  } finally {
+    btn.innerHTML = '<i class="fa fa-file-pdf"></i> Save / Export PDF';
     btn.disabled = false;
-  });
+  }
 }
 
 function handleExcelUpload(e) {
