@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MMW ERP & Tally Prime Tax Invoice</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- Direct Mobile APK PDF Engine -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <style>
+    body { background-color: #eef2f5; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
+    .nav-tabs .nav-link { font-weight: 600; color: #495057; }
+    .nav-tabs .nav-link.active { color: #0d6efd; border-bottom: 3px solid #0d6efd; background-color: #fff; }
+    .card { border-radius: 6px; border: 1px solid #ced4da; }
+    .search-box { position: relative; }
+    .search-box i { position: absolute; left: 12px; top: 10px; color: #6c757d; }
+    .search-box input { padding-left: 36px; }
+
+    /* ========================================================
+       TALLY PRIME INVOICE FORMAT
+       ======================================================== */
+    .invoice-wrapper {
+      max-width: 820px;
+      margin: 10px auto;
+    }
+    .tally-title {
+      text-align: center;
+      font-weight: bold;
+      font-size: 13px;
+      margin-bottom: 5px;
+      color: #000;
+      font-family: Arial, sans-serif;
+    }
+    .tally-a4-page {
+      background: #ffffff;
+      width: 100%;
+      border: 1.2px solid #000;
+      color: #000;
+      font-family: Arial, sans-serif;
+      font-size: 9.5px;
+      box-sizing: border-box;
+      line-height: 1.25;
+      display: flex;
+      flex-direction: column;
+      min-height: 980px;
+    }
+    .tally-tbl {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 0;
+    }
+    .tally-tbl th, .tally-tbl td {
+      border: 1px solid #000;
+      padding: 2.5px 4px;
+      vertical-align: top;
+      color: #000;
+    }
+    .tally-tbl th {
+      background: #ffffff;
+      font-weight: bold;
+      text-align: center;
+    }
+    .border-top-none { border-top: none !important; }
+    
+    .item-row td {
+      border-top: none !important;
+      border-bottom: none !important;
+      padding: 2px 4px !important;
+    }
+
+    .bottom-stretch-spacer {
+      flex: 1 1 auto;
+      border-left: 1px solid #000;
+      border-right: 1px solid #000;
+      min-height: 60px;
+      background: #fff;
+    }
+
+    @media print {
+      @page {
+        size: A4 portrait;
+        margin: 6mm 8mm;
+      }
+      html, body {
+        background: #fff !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+      }
+      .no-print, nav, .nav, .tab-content > .tab-pane:not(#tab-billing), .billing-controls-col {
+        display: none !important;
+      }
+      #tab-billing {
+        display: block !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        height: 100% !important;
+      }
+      .billing-preview-col {
+        width: 100% !important;
+        max-width: 100% !important;
+        flex: 0 0 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        height: 100% !important;
+      }
+      .invoice-wrapper {
+        margin: 0 !important;
+        max-width: 100% !important;
+        height: 100% !important;
+      }
+      .tally-a4-page {
+        border: 1.2px solid #000 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        height: 275mm !important;
+        min-height: 275mm !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        box-sizing: border-box !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: space-between !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container-fluid py-2">
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-2 gap-2 no-print">
+    <div>
+      <h5 class="mb-0 fw-bold text-primary"><i class="fa fa-cubes"></i> MMW Master ERP & Billing</h5>
+      <small class="text-muted">Master Databases | Catalog Specs | Tally Prime Billing</small>
+    </div>
+    <div class="d-flex gap-2">
+      <label class="btn btn-success btn-sm mb-0">
+        <i class="fa fa-file-excel"></i> Upload Excel (.xlsx)
+        <input type="file" id="excelFileInput" accept=".xlsx, .xls" style="display: none;" onchange="handleExcelUpload(event)">
+      </label>
+      <button class="btn btn-outline-danger btn-sm" onclick="clearData()"><i class="fa fa-rotate-left"></i> Reset</button>
+    </div>
+  </div>
+
+  <ul class="nav nav-tabs mb-2 no-print" id="myTab" role="tablist">
+    <li class="nav-item">
+      <button class="nav-link active" id="search-tab" data-bs-toggle="tab" data-bs-target="#tab-search" type="button">
+        <i class="fa fa-search"></i> Master Search
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" id="catalog-tab" data-bs-toggle="tab" data-bs-target="#tab-catalog" type="button">
+        <i class="fa fa-book-open"></i> Product Catalog (<span id="catTabBadge">0</span>)
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" id="billing-tab" data-bs-toggle="tab" data-bs-target="#tab-billing" type="button">
+        <i class="fa fa-file-invoice-dollar"></i> Tally Tax Invoice
+      </button>
+    </li>
+  </ul>
+
+  <div class="tab-content">
+    <!-- 1. MASTER SEARCH -->
+    <div class="tab-pane fade show active" id="tab-search">
+      <div class="card p-2 mb-2">
+        <div class="row g-2 align-items-center">
+          <div class="col-md-7 search-box">
+            <i class="fa fa-search"></i>
+            <input type="text" id="globalSearchInput" class="form-control form-control-sm" placeholder="Search Customer, Part Code, Model, Chemical..." onkeyup="filterDatabase()">
+          </div>
+          <div class="col-md-3">
+            <select id="typeFilter" class="form-select form-select-sm" onchange="filterDatabase()">
+              <option value="ALL">All Categories</option>
+              <option value="Customer">Customers</option>
+              <option value="Catalog">Catalog Machines</option>
+              <option value="Spare">Machine Spares</option>
+              <option value="Chemical">Chemicals & Detailing</option>
+            </select>
+          </div>
+          <div class="col-md-2 text-end text-muted small">
+            Records: <span id="recordCount" class="fw-bold text-dark">0</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card table-responsive" style="max-height: 520px;">
+        <table class="table table-hover table-sm align-middle mb-0" style="font-size: 12px;">
+          <thead class="table-light sticky-top">
+            <tr>
+              <th>Type</th>
+              <th>Name / Code / Workshop</th>
+              <th>Category / Model / District</th>
+              <th>HSN / Specs</th>
+              <th>Price (₹)</th>
+              <th class="text-center">Action</th>
+            </tr>
+          </thead>
+          <tbody id="masterTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 2. PRODUCT CATALOG -->
+    <div class="tab-pane fade" id="tab-catalog">
+      <div class="card p-2 mb-2">
+        <input type="text" id="catalogSearchInput" class="form-control form-control-sm" placeholder="Filter Catalog Machines..." onkeyup="renderCatalog()">
+      </div>
+      <div class="row g-2" id="catalogCardsContainer"></div>
+    </div>
+
+    <!-- 3. TALLY BILLING -->
+    <div class="tab-pane fade" id="tab-billing">
+      <div class="row g-2">
+        
+        <!-- Controls -->
+        <div class="col-md-4 billing-controls-col no-print">
+          <div class="card p-2 mb-2">
+            <h6 class="fw-bold border-bottom pb-1 mb-2 small text-primary"><i class="fa fa-user"></i> Customer & Dispatch Info</h6>
+            <div class="mb-2">
+              <label class="form-label small mb-0 fw-bold">Search Customer</label>
+              <input type="text" id="customerSearchInput" class="form-control form-control-sm" list="customerDataList" placeholder="Type customer name..." oninput="onCustomerSelect()">
+              <datalist id="customerDataList"></datalist>
+            </div>
+            <div class="row g-1 mb-1">
+              <div class="col-6">
+                <label class="form-label small mb-0">Invoice No.</label>
+                <input type="text" id="invNo" class="form-control form-control-sm" value="TTESPL/24/26-27" oninput="updateInvoicePreview()">
+              </div>
+              <div class="col-6">
+                <label class="form-label small mb-0">Dated</label>
+                <input type="text" id="invDate" class="form-control form-control-sm" value="4-Sep-26" oninput="updateInvoicePreview()">
+              </div>
+            </div>
+          </div>
+
+          <div class="card p-2">
+            <h6 class="fw-bold border-bottom pb-1 mb-2 small text-primary"><i class="fa fa-cart-plus"></i> Add Product Item</h6>
+            <div class="mb-2">
+              <label class="form-label small mb-0 fw-bold">Search Product / Spare</label>
+              <input type="text" id="productSearchInput" class="form-control form-control-sm" list="productDataList" placeholder="Type product name or part code..." oninput="onProductSelect()">
+              <datalist id="productDataList"></datalist>
+            </div>
+            <div class="row g-1 mb-1">
+              <div class="col-6">
+                <label class="form-label small mb-0">HSN/SAC</label>
+                <input type="text" id="itemHsn" class="form-control form-control-sm" value="34029011">
+              </div>
+              <div class="col-6">
+                <label class="form-label small mb-0">GST %</label>
+                <input type="number" id="itemGst" class="form-control form-control-sm" value="18">
+              </div>
+            </div>
+            <div class="row g-1 mb-2">
+              <div class="col-4">
+                <label class="form-label small mb-0">Qty</label>
+                <input type="number" id="itemQty" class="form-control form-control-sm" value="1" min="1">
+              </div>
+              <div class="col-4">
+                <label class="form-label small mb-0">Rate (₹)</label>
+                <input type="number" id="itemRate" class="form-control form-control-sm" value="918.00" step="0.01">
+              </div>
+              <div class="col-4">
+                <label class="form-label small mb-0">Disc %</label>
+                <input type="number" id="itemDisc" class="form-control form-control-sm" value="0" step="0.1">
+              </div>
+            </div>
+            <button class="btn btn-primary btn-sm w-100 mb-2" onclick="addItemToInvoice()"><i class="fa fa-plus"></i> Add Item to Bill</button>
+            <button id="savePdfBtn" class="btn btn-success btn-sm w-100 fw-bold" onclick="printInvoicePDF()"><i class="fa fa-download"></i> Save as PDF / Print</button>
+          </div>
+        </div>
+
+        <!-- Tally Invoice Preview -->
+        <div class="col-md-8 billing-preview-col">
+          <div class="invoice-wrapper" id="invoiceCaptureSection">
+            
+            <div class="tally-title">Tax Invoice</div>
+
+            <div id="invoice-print-area" class="tally-a4-page">
+              
+              <!-- 1. Header & Dispatch Grid -->
+              <table class="tally-tbl" style="border: none;">
+                <tr>
+                  <td style="width: 50%; vertical-align: top; line-height: 1.25; border-top: none; border-left: none;">
+                    <strong style="font-size: 10px;">TWINTOWN EXPRESS SERVICES PVT LTD FY 26-27</strong><br>
+                    PLOT:1270/8566, SATYA VIHAR, RASHULGARH,<br>
+                    BHUBANESWAR-751010<br>
+                    Ph-8917465040, 6743175599<br>
+                    Mail Id : -info@ttespl.com<br>
+                    GSTIN/UIN: <strong>21AAICT6014E1ZT</strong><br>
+                    State Name : Odisha, Code : 21<br>
+                    E-Mail : info@ttespl.com
+                  </td>
+                  <td style="width: 50%; padding: 0; vertical-align: top; border-top: none; border-right: none;">
+                    <table style="width: 100%; border-collapse: collapse;">
+                      <tr>
+                        <td style="width: 50%; border-right: 1px solid #000; border-bottom: 1px solid #000; border-top: none; padding: 2px 4px;">
+                          Invoice No.<br><strong id="invDisplayNo">TTESPL/24/26-27</strong>
+                        </td>
+                        <td style="border-bottom: 1px solid #000; border-top: none; border-right: none; padding: 2px 4px;">
+                          Dated<br><strong id="invDisplayDate">4-Sep-26</strong>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 2px 4px;">Delivery Note<br>&nbsp;</td>
+                        <td style="border-bottom: 1px solid #000; border-right: none; padding: 2px 4px;">Mode/Terms of Payment<br>&nbsp;</td>
+                      </tr>
+                      <tr>
+                        <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 2px 4px;">Reference No. & Date.<br>&nbsp;</td>
+                        <td style="border-bottom: 1px solid #000; border-right: none; padding: 2px 4px;">Other References<br>&nbsp;</td>
+                      </tr>
+                      <tr>
+                        <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 2px 4px;">Buyer's Order No.<br>&nbsp;</td>
+                        <td style="border-bottom: 1px solid #000; border-right: none; padding: 2px 4px;">Dated<br>&nbsp;</td>
+                      </tr>
+                      <tr>
+                        <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 2px 4px;">Dispatch Doc No.<br>&nbsp;</td>
+                        <td style="border-bottom: 1px solid #000; border-right: none; padding: 2px 4px;">Delivery Note Date<br>&nbsp;</td>
+                      </tr>
+                      <tr>
+                        <td style="border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 2px 4px;">Dispatched through<br>&nbsp;</td>
+                        <td style="border-bottom: 1px solid #000; border-right: none; padding: 2px 4px;">Destination<br>&nbsp;</td>
+                      </tr>
+                      <tr>
+                        <td colspan="2" style="border-right: none; padding: 2px 4px;">Terms of Delivery<br>&nbsp;</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                <!-- Consignee / Buyer -->
+                <tr>
+                  <td style="vertical-align: top; line-height: 1.25; padding: 2px 4px; border-left: none;">
+                    Consignee (Ship to)<br>
+                    <strong id="billConsigneeName">Sattva Engineering Services</strong><br>
+                    <span id="billConsigneeAddress">Plot No-420, Saheed Nagar, Near Omc Bda Park, Khordha</span><br>
+                    GSTIN/UIN &nbsp;&nbsp;: <strong id="billConsigneeGstin">21AFTFS5991N1Z0</strong><br>
+                    State Name &nbsp;: Odisha, Code : 21
+                  </td>
+                  <td style="vertical-align: top; line-height: 1.25; padding: 2px 4px; border-right: none;">
+                    Buyer (Bill to)<br>
+                    <strong id="billBuyerName">Sattva Engineering Services</strong><br>
+                    <span id="billBuyerAddress">Plot No-420, Saheed Nagar, Near Omc Bda Park, Khordha</span><br>
+                    GSTIN/UIN &nbsp;&nbsp;: <strong id="billBuyerGstin">21AFTFS5991N1Z0</strong><br>
+                    State Name &nbsp;: Odisha, Code : 21
+                  </td>
+                </tr>
+              </table>
+
+              <!-- 2. Products Section (Compact & Clean) -->
+              <table class="tally-tbl border-top-none" style="margin-top: -1px; border-left: none; border-right: none;">
+                <thead>
+                  <tr>
+                    <th style="width: 4%; border-left: none;">SI<br>No.</th>
+                    <th style="width: 33%;">Description of Goods</th>
+                    <th style="width: 10%;">HSN/SAC</th>
+                    <th style="width: 7%;">GST<br>Rate</th>
+                    <th style="width: 9%;">Quantity</th>
+                    <th style="width: 9%;">Rate<br><small>(Incl. of Tax)</small></th>
+                    <th style="width: 8%;">Rate</th>
+                    <th style="width: 5%;">per</th>
+                    <th style="width: 4%;">Disc. %</th>
+                    <th style="width: 11%; border-right: none;">Amount</th>
+                  </tr>
+                </thead>
+                <tbody id="invoiceTableItems"></tbody>
+                <tfoot>
+                  <tr>
+                    <td colspan="4" style="text-align: right; border-top: 1px solid #000; border-bottom: 1px solid #000; border-left: none;">Total</td>
+                    <td style="text-align: center; font-weight: bold; border-top: 1px solid #000; border-bottom: 1px solid #000;" id="invTotalQty">2 PICES</td>
+                    <td colspan="4" style="border-top: 1px solid #000; border-bottom: 1px solid #000;"></td>
+                    <td style="text-align: right; font-weight: bold; border-top: 1px solid #000; border-bottom: 1px solid #000; border-right: none;" id="invGrandTotal">₹ 3,355.00</td>
+                  </tr>
+                </tfoot>
+              </table>
+
+              <!-- 3. Amount Chargeable in Words -->
+              <table class="tally-tbl border-top-none" style="margin-top: -1px; border-left: none; border-right: none;">
+                <tr>
+                  <td style="border-right: none; border-left: none; padding: 3px 4px;">
+                    Amount Chargeable (in words)<br>
+                    <strong id="invAmountInWords">INR Three Thousand Three Hundred Fifty Five Only</strong>
+                  </td>
+                  <td style="text-align: right; border-left: none; border-right: none; font-style: italic; vertical-align: top; padding: 3px 4px;">
+                    E. & O.E
+                  </td>
+                </tr>
+              </table>
+
+              <!-- 4. Tax Summary Breakdown -->
+              <table class="tally-tbl border-top-none" style="margin-top: -1px; font-size: 9px; border-left: none; border-right: none;">
+                <thead>
+                  <tr>
+                    <th rowspan="2" style="width: 25%; border-left: none;">HSN/SAC</th>
+                    <th rowspan="2" style="width: 18%;">Taxable<br>Value</th>
+                    <th colspan="2" style="width: 23%;">CGST</th>
+                    <th colspan="2" style="width: 23%;">SGST/UTGST</th>
+                    <th rowspan="2" style="width: 11%; border-right: none;">Total<br>Tax Amount</th>
+                  </tr>
+                  <tr>
+                    <th style="width: 8%;">Rate</th>
+                    <th style="width: 15%;">Amount</th>
+                    <th style="width: 8%;">Rate</th>
+                    <th style="width: 15%;">Amount</th>
+                  </tr>
+                </thead>
+                <tbody id="taxSummaryRows"></tbody>
+              </table>
+
+              <!-- 5. Tax in Words -->
+              <table class="tally-tbl border-top-none" style="margin-top: -1px; border-left: none; border-right: none;">
+                <tr>
+                  <td style="padding: 3px 4px; border-left: none; border-right: none;">
+                    Tax Amount (in words) &nbsp;: &nbsp;<strong id="invTaxAmountInWords">INR Five Hundred Eleven and Seventy Four paise Only</strong>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- 6. Bank Details, Declaration & Signatory -->
+              <table class="tally-tbl border-top-none" style="margin-top: -1px; border-left: none; border-right: none;">
+                <tr>
+                  <td style="width: 50%; vertical-align: top; line-height: 1.25; padding: 3px 4px; border-left: none;">
+                    Company's Bank Details<br>
+                    Bank Name &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: <strong>ICICI BANK AC-150005501249</strong><br>
+                    A/c No. &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: <strong>150005501249</strong><br>
+                    Branch & IFS Code : <strong>CUTTCAK ROAD & ICIC0001500</strong><br><br>
+                    <u>Declaration</u><br>
+                    We declare that this invoice shows the actual price of the goods described and that all particulars are true and correct.
+                  </td>
+                  <td style="width: 50%; padding: 0; vertical-align: top; border-right: none;">
+                    <table style="width: 100%; border-collapse: collapse;">
+                      <tr>
+                        <td style="text-align: right; border: none; padding: 3px 4px;">
+                          for <strong>TWINTOWN EXPRESS SERVICES PVT LTD FY 26-27</strong>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="text-align: right; border: none; padding: 3px 4px; height: 50px; vertical-align: bottom;">
+                          Authorised Signatory
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- 7. Auto-stretch blank space -->
+              <div class="bottom-stretch-spacer"></div>
+
+              <!-- 8. Footer Note -->
+              <div style="text-align: center; font-size: 8px; padding: 4px 0 2px 0; color: #333; border-top: 1px solid #000;">
+                This is a Computer Generated Invoice
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+let masterDB = JSON.parse(localStorage.getItem('MMW_APP_DB')) || [
+  { 
+    id: "CUST-1", 
+    type: "Customer", 
+    name: "Sambal Autocare Private Limited", 
+    category: "Khordha", 
+    hsn: "21ABBCS2077B1ZD", 
+    price: 0, 
+    gst: 18, 
+    desc: "Plot No-433, 4th Floor, Plot No-714, Gali No-1, Near Hotel Royal Chanakya, Bharatpur, Bhubaneswar, Odisha 751019", 
+    specs: "Mobile: 9437012345" 
+  },
+  { 
+    id: "CUST-2", 
+    type: "Customer", 
+    name: "Sattva Engineering Services", 
+    category: "Khordha", 
+    hsn: "21AFTFS5991N1Z0", 
+    price: 0, 
+    gst: 18, 
+    desc: "Plot No-420, Saheed Nagar, Near Omc Bda Park, Khordha", 
+    specs: "Mobile: 9437012345" 
+  },
+  { 
+    id: "CHM-1", 
+    type: "Chemical", 
+    name: "SNOW FOAM SHAMPOO 5 LTR", 
+    category: "Ma-Fra Detailing", 
+    hsn: "34029011", 
+    price: 918.00, 
+    gst: 18, 
+    desc: "High Foaming car wash shampoo 5 Litre", 
+    specs: "Pack: 5 Litre" 
+  },
+  { 
+    id: "CHM-2", 
+    type: "Chemical", 
+    name: "4 IN DRESSER 5 LTR", 
+    category: "Ma-Fra Detailing", 
+    hsn: "34059090", 
+    price: 1925.00, 
+    gst: 18, 
+    desc: "Multi-surface dashboard & tyre dresser 5 Litre", 
+    specs: "Pack: 5 Litre" 
+  }
+];
+
+let invoiceItems = [
+  { name: "SNOW FOAM SHAMPOO 5 LTR", hsn: "34029011", gst: 18, qty: 1, rate: 918.00, disc: 0, unit: "PICES" },
+  { name: "4 IN DRESSER 5 LTR", hsn: "34059090", gst: 18, qty: 1, rate: 1925.00, disc: 0, unit: "PICES" }
+];
+
+function initApp() {
+  filterDatabase();
+  renderCatalog();
+  populateDatalists();
+  updateInvoicePreview();
+}
+
+function filterDatabase() {
+  const q = document.getElementById('globalSearchInput').value.toLowerCase().trim();
+  const type = document.getElementById('typeFilter').value;
+
+  const filtered = masterDB.filter(i => {
+    const matchType = (type === 'ALL' || i.type === type);
+    const matchText = ((i.name||'') + " " + (i.category||'') + " " + (i.hsn||'') + " " + (i.desc||'') + " " + (i.specs||'')).toLowerCase().includes(q);
+    return matchType && matchText;
+  });
+
+  document.getElementById('recordCount').innerText = filtered.length;
+  const tbody = document.getElementById('masterTableBody');
+  tbody.innerHTML = filtered.slice(0, 100).map(item => `
+    <tr>
+      <td><span class="badge ${item.type==='Customer'?'bg-info text-dark':item.type==='Catalog'?'bg-primary':item.type==='Spare'?'bg-warning text-dark':'bg-success'}">${item.type}</span></td>
+      <td><strong>${item.name}</strong></td>
+      <td>${item.category}</td>
+      <td><small class="text-muted">${item.hsn || '-'}</small></td>
+      <td>${item.price > 0 ? '₹ ' + Number(item.price).toLocaleString('en-IN') : '-'}</td>
+      <td class="text-center">
+        <button class="btn btn-sm btn-outline-primary py-0 px-2" onclick="billDirect('${item.id}')"><i class="fa fa-cart-plus"></i> Bill</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function renderCatalog() {
+  const q = (document.getElementById('catalogSearchInput')?.value || '').toLowerCase().trim();
+  const cats = masterDB.filter(i => i.type === 'Catalog' && ((i.name||'') + " " + (i.category||'') + " " + (i.desc||'') + " " + (i.specs||'')).toLowerCase().includes(q));
+  
+  document.getElementById('catTabBadge').innerText = cats.length;
+  const cont = document.getElementById('catalogCardsContainer');
+  if (cats.length === 0) {
+    cont.innerHTML = '<div class="col-12 text-center text-muted py-4">No Catalog machines found.</div>';
+    return;
+  }
+  cont.innerHTML = cats.map(i => `
+    <div class="col-md-6 col-lg-4">
+      <div class="card p-3 h-100 shadow-sm">
+        <div class="d-flex justify-content-between align-items-start mb-1">
+          <h6 class="fw-bold text-primary mb-0">${i.name}</h6>
+          <span class="badge bg-secondary">${i.category}</span>
+        </div>
+        <p class="small text-muted mb-2">${i.desc || ''}</p>
+        <div class="bg-light p-2 rounded small mb-2 border" style="font-size: 11px;">${i.specs || 'N/A'}</div>
+        <div class="mt-auto d-flex justify-content-between align-items-center">
+          <span class="fw-bold text-success fs-6">₹ ${Number(i.price).toLocaleString('en-IN')}</span>
+          <button class="btn btn-sm btn-primary" onclick="billDirect('${i.id}')"><i class="fa fa-cart-plus"></i> Add to Bill</button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function populateDatalists() {
+  const custList = document.getElementById('customerDataList');
+  custList.innerHTML = masterDB.filter(i => i.type === 'Customer').map(c => `
+    <option value="${c.name}">[${c.category || 'Customer'}] GSTIN: ${c.hsn || 'N/A'}</option>
+  `).join('');
+
+  const prodList = document.getElementById('productDataList');
+  prodList.innerHTML = masterDB.filter(i => i.type !== 'Customer').slice(0, 1500).map(p => `
+    <option value="${p.name}">[${p.type}] ₹${p.price} | HSN: ${p.hsn || '-'}</option>
+  `).join('');
+}
+
+function onCustomerSelect() {
+  const inputVal = document.getElementById('customerSearchInput').value.trim();
+  const c = masterDB.find(i => i.type === 'Customer' && i.name.toLowerCase() === inputVal.toLowerCase());
+  if (!c) return;
+
+  const addr = (c.desc || c.category);
+  document.getElementById('billConsigneeName').innerText = c.name;
+  document.getElementById('billConsigneeAddress').innerText = addr;
+  document.getElementById('billConsigneeGstin').innerText = c.hsn || 'N/A';
+  document.getElementById('billBuyerName').innerText = c.name;
+  document.getElementById('billBuyerAddress').innerText = addr;
+  document.getElementById('billBuyerGstin').innerText = c.hsn || 'N/A';
+}
+
+function onProductSelect() {
+  const inputVal = document.getElementById('productSearchInput').value.trim();
+  const p = masterDB.find(i => i.type !== 'Customer' && i.name.toLowerCase() === inputVal.toLowerCase());
+  if (!p) return;
+
+  document.getElementById('itemHsn').value = p.hsn || '84249000';
+  document.getElementById('itemGst').value = p.gst || 18;
+  document.getElementById('itemRate').value = p.price || 0;
+}
+
+function billDirect(id) {
+  const item = masterDB.find(i => i.id === id);
+  if (!item) return;
+
+  if (item.type === 'Customer') {
+    document.getElementById('customerSearchInput').value = item.name;
+    onCustomerSelect();
+  } else {
+    invoiceItems.push({
+      name: item.name,
+      hsn: item.hsn || '84249000',
+      gst: 18,
+      qty: 1,
+      rate: parseFloat(item.price) || 0,
+      disc: 0,
+      unit: 'PICES'
+    });
+    updateInvoicePreview();
+  }
+
+  const tabEl = document.getElementById('billing-tab');
+  const tab = new bootstrap.Tab(tabEl);
+  tab.show();
+}
+
+function addItemToInvoice() {
+  const inputName = document.getElementById('productSearchInput').value.trim();
+  const name = inputName || "Custom Item";
+  const hsn = document.getElementById('itemHsn').value;
+  const gst = parseFloat(document.getElementById('itemGst').value) || 18;
+  const qty = parseFloat(document.getElementById('itemQty').value) || 1;
+  const rate = parseFloat(document.getElementById('itemRate').value) || 0;
+  const disc = parseFloat(document.getElementById('itemDisc').value) || 0;
+
+  invoiceItems.push({ name, hsn, gst, qty, rate, disc, unit: 'PICES' });
+  document.getElementById('productSearchInput').value = '';
+  updateInvoicePreview();
+}
+
+function removeItem(idx) {
+  invoiceItems.splice(idx, 1);
+  updateInvoicePreview();
+}
+
+function updateInvoicePreview() {
+  const invTable = document.getElementById('invoiceTableItems');
+  invTable.innerHTML = '';
+  let totalQty = 0, subTotal = 0, taxSummary = {};
+
+  invoiceItems.forEach((item, idx) => {
+    totalQty += item.qty;
+    let discRate = item.rate * (1 - (item.disc / 100));
+    let lineAmt = discRate * item.qty;
+    let rateInclTax = discRate * (1 + (item.gst / 100));
+    subTotal += lineAmt;
+
+    if (!taxSummary[item.hsn]) taxSummary[item.hsn] = { taxable: 0, gst: item.gst };
+    taxSummary[item.hsn].taxable += lineAmt;
+
+    invTable.innerHTML += `
+      <tr class="item-row">
+        <td style="text-align:center; border-left: none;">${idx+1} <span class="no-print text-danger" style="cursor:pointer;" onclick="removeItem(${idx})">×</span></td>
+        <td><strong>${item.name}</strong></td>
+        <td style="text-align:left;">${item.hsn}</td>
+        <td style="text-align:center;">${item.gst} %</td>
+        <td style="text-align:center; font-weight:bold;">${item.qty} ${item.unit}</td>
+        <td style="text-align:right;">${rateInclTax.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+        <td style="text-align:right;">${item.rate.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+        <td style="text-align:center;">${item.unit}</td>
+        <td style="text-align:center;">${item.disc > 0 ? item.disc + ' %' : ''}</td>
+        <td style="text-align:right; font-weight:bold; border-right: none;">${lineAmt.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+      </tr>
+    `;
+  });
+
+  let totalCgst = subTotal * 0.09;
+  let totalSgst = subTotal * 0.09;
+  let exactGrandTotal = subTotal + totalCgst + totalSgst;
+  let roundedGrandTotal = Math.round(exactGrandTotal);
+  let roundOff = roundedGrandTotal - exactGrandTotal;
+
+  invTable.innerHTML += `
+    <tr class="item-row"><td colspan="10" style="height: 10px; border:none !important;">&nbsp;</td></tr>
+    <tr class="item-row">
+      <td colspan="9" style="text-align:right; border-left: none;">&nbsp;</td>
+      <td style="text-align:right; border-top: 1px solid #000 !important; font-weight:bold; border-right: none;">
+        ${subTotal.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+      </td>
+    </tr>
+    <tr class="item-row">
+      <td colspan="2" style="text-align:right; font-weight:bold; font-style:italic; border-left: none;">CGST</td>
+      <td colspan="7"></td>
+      <td style="text-align:right; font-weight:bold; border-right: none;">${totalCgst.toFixed(2)}</td>
+    </tr>
+    <tr class="item-row">
+      <td colspan="2" style="text-align:right; font-weight:bold; font-style:italic; border-left: none;">SGST</td>
+      <td colspan="7"></td>
+      <td style="text-align:right; font-weight:bold; border-right: none;">${totalSgst.toFixed(2)}</td>
+    </tr>
+    <tr class="item-row">
+      <td colspan="2" style="text-align:right; font-weight:bold; font-style:italic; border-left: none;">ROUND OFF</td>
+      <td colspan="7"></td>
+      <td style="text-align:right; font-weight:bold; border-right: none;">${roundOff.toFixed(2)}</td>
+    </tr>
+    <tr class="item-row"><td colspan="10" style="height: 6px; border:none !important;">&nbsp;</td></tr>
+  `;
+
+  document.getElementById('invTotalQty').innerText = totalQty + " PICES";
+  document.getElementById('invGrandTotal').innerText = "₹ " + roundedGrandTotal.toLocaleString('en-IN') + ".00";
+  document.getElementById('invAmountInWords').innerText = "INR " + inWords(roundedGrandTotal) + " Only";
+
+  const taxBody = document.getElementById('taxSummaryRows');
+  taxBody.innerHTML = '';
+  let sumTaxable = 0, sumTax = 0;
+
+  for (let hsn in taxSummary) {
+    let tVal = taxSummary[hsn].taxable;
+    let cgstVal = tVal * 0.09;
+    let sgstVal = tVal * 0.09;
+    let lineTax = cgstVal + sgstVal;
+    sumTaxable += tVal;
+    sumTax += lineTax;
+
+    taxBody.innerHTML += `
+      <tr>
+        <td style="text-align:left; border-left: none;">${hsn}</td>
+        <td style="text-align:right;">${tVal.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+        <td style="text-align:center;">9%</td>
+        <td style="text-align:right;">${cgstVal.toFixed(2)}</td>
+        <td style="text-align:center;">9%</td>
+        <td style="text-align:right;">${sgstVal.toFixed(2)}</td>
+        <td style="text-align:right; border-right: none;">${lineTax.toFixed(2)}</td>
+      </tr>
+    `;
+  }
+
+  taxBody.innerHTML += `
+    <tr style="font-weight:bold;">
+      <td style="text-align:right; border-left: none;">Total</td>
+      <td style="text-align:right;">${sumTaxable.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+      <td></td>
+      <td style="text-align:right;">${(sumTaxable * 0.09).toFixed(2)}</td>
+      <td></td>
+      <td style="text-align:right;">${(sumTaxable * 0.09).toFixed(2)}</td>
+      <td style="text-align:right; border-right: none;">${sumTax.toFixed(2)}</td>
+    </tr>
+  `;
+
+  let taxPaisa = Math.round((sumTax - Math.floor(sumTax)) * 100);
+  let taxWords = "INR " + inWords(Math.floor(sumTax));
+  if (taxPaisa > 0) {
+    taxWords += " and " + inWords(taxPaisa) + " paise Only";
+  } else {
+    taxWords += " Only";
+  }
+  document.getElementById('invTaxAmountInWords').innerText = taxWords;
+
+  document.getElementById('invDisplayNo').innerText = document.getElementById('invNo').value;
+  document.getElementById('invDisplayDate').innerText = document.getElementById('invDate').value;
+}
+
+// DIRECT MOBILE APK PDF GENERATOR (Guaranteed to work in Android WebViews)
+function printInvoicePDF() {
+  const btn = document.getElementById('savePdfBtn');
+  btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Generating PDF...';
+  btn.disabled = true;
+
+  const element = document.getElementById('invoiceCaptureSection');
+  const invNumber = document.getElementById('invNo').value.replace(/[\/\\:]/g, '_');
+
+  const opt = {
+    margin:       [5, 6, 5, 6],
+    filename:     `Tax_Invoice_${invNumber}.pdf`,
+    image:        { type: 'jpeg', quality: 0.98 },
+    html2canvas:  { scale: 2, useCORS: true, letterRendering: true },
+    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  };
+
+  html2pdf().set(opt).from(element).save().then(() => {
+    btn.innerHTML = '<i class="fa fa-download"></i> Save as PDF / Print';
+    btn.disabled = false;
+  }).catch(err => {
+    console.error("html2pdf failed, attempting window.print()", err);
+    window.print();
+    btn.innerHTML = '<i class="fa fa-download"></i> Save as PDF / Print';
+    btn.disabled = false;
+  });
+}
+
+function handleExcelUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(evt) {
+    const data = new Uint8Array(evt.target.result);
+    const workbook = XLSX.read(data, { type: 'array' });
+    let newItems = [];
+
+    if (workbook.Sheets['Customer details ']) {
+      const custData = XLSX.utils.sheet_to_json(workbook.Sheets['Customer details ']);
+      custData.forEach((r, idx) => {
+        const name = r['Workshop / Business Name'] || r['Contact Person / Owner'];
+        if (name) {
+          newItems.push({
+            id: 'CUST-' + (idx+1),
+            type: 'Customer',
+            name: String(name).trim(),
+            category: String(r['District'] || r['Category / Business Type'] || 'Odisha').trim(),
+            hsn: String(r['GSTIN / Reg No.'] || '').trim(),
+            price: 0,
+            gst: 18,
+            desc: String(r['Workshop Address & Landmark'] || '').trim(),
+            specs: 'Phone: ' + (r['Mobile / Contact No.'] || 'N/A')
+          });
+        }
+      });
+    }
+
+    if (workbook.Sheets['MACHINES SPARE PARTS ']) {
+      const spareData = XLSX.utils.sheet_to_json(workbook.Sheets['MACHINES SPARE PARTS ']);
+      spareData.forEach((r, idx) => {
+        const code = r['PART CODE'];
+        const desc = r['DESCRIPTION'];
+        const model = r['MACHINE MODEL'] || 'General';
+        if (desc || code) {
+          newItems.push({
+            id: 'SPR-' + (idx+1),
+            type: 'Spare',
+            name: `${desc || ''} [${code || ''}]`.trim(),
+            category: `Spares (${model})`,
+            hsn: '84249000',
+            price: parseFloat(r['Minimum Sales Price ₹']) || 0,
+            gst: 18,
+            desc: `Part: ${desc} | Model: ${model}`,
+            specs: `Dealer Price: ₹${r['Dealer Price'] || 0}`
+          });
+        }
+      });
+    }
+
+    if (workbook.Sheets['Catalog_Products_Master']) {
+      const catData = XLSX.utils.sheet_to_json(workbook.Sheets['Catalog_Products_Master']);
+      catData.forEach((r, idx) => {
+        const name = r['Product Name (Catalog)'];
+        if (name) {
+          newItems.push({
+            id: 'CAT-' + (idx+1),
+            type: 'Catalog',
+            name: String(name).trim(),
+            category: String(r['Category'] || 'Machinery').trim(),
+            hsn: '84243000',
+            price: parseFloat(r['Customer Price (without GST)']) || parseFloat(r['Standard Selling Price']) || 0,
+            gst: 18,
+            desc: String(r['Description'] || '').trim(),
+            specs: String(r['Technical Specifications'] || '').trim()
+          });
+        }
+      });
+    }
+
+    if (workbook.Sheets['Ma-Fra chemical price list']) {
+      const chemData = XLSX.utils.sheet_to_json(workbook.Sheets['Ma-Fra chemical price list']);
+      chemData.forEach((r, idx) => {
+        const name = r['Product'];
+        if (name) {
+          newItems.push({
+            id: 'CHM-' + (idx+1),
+            type: 'Chemical',
+            name: String(name).trim(),
+            category: 'Chemicals',
+            hsn: String(r['HSN'] || '34021300').trim(),
+            price: parseFloat(r['Updated\nCustomer Price']) || 0,
+            gst: 18,
+            desc: String(name).trim(),
+            specs: 'MRP: ₹' + (r['MRP'] || 0)
+          });
+        }
+      });
+    }
+
+    masterDB = newItems;
+    localStorage.setItem('MMW_APP_DB', JSON.stringify(masterDB));
+    alert(`Success! Loaded ${masterDB.length} records from Excel directly.`);
+    initApp();
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function clearData() {
+  if (confirm("Reset local database?")) {
+    localStorage.removeItem('MMW_APP_DB');
+    location.reload();
+  }
+}
+
+function inWords(num) {
+  const a = ['', 'One ', 'Two ', 'Three ', 'Four ', 'Five ', 'Six ', 'Seven ', 'Eight ', 'Nine ', 'Ten ', 'Eleven ', 'Twelve ', 'Thirteen ', 'Fourteen ', 'Fifteen ', 'Sixteen ', 'Seventeen ', 'Eighteen ', 'Nineteen '];
+  const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+  if ((num = num.toString()).length > 9) return 'overflow';
+  let n = ('000000000' + num).substr(-9).match(/^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/);
+  if (!n) return '';
+  let str = '';
+  str += (n[1] != 0) ? (a[Number(n[1])] || b[n[1][0]] + ' ' + a[n[1][1]]) + 'Crore ' : '';
+  str += (n[2] != 0) ? (a[Number(n[2])] || b[n[2][0]] + ' ' + a[n[2][1]]) + 'Lakh ' : '';
+  str += (n[3] != 0) ? (a[Number(n[3])] || b[n[3][0]] + ' ' + a[n[3][1]]) + 'Thousand ' : '';
+  str += (n[4] != 0) ? (a[Number(n[4])] || b[n[4][0]] + ' ' + a[n[4][1]]) + 'Hundred ' : '';
+  str += (n[5] != 0) ? ((str != '') ? 'and ' : '') + (a[Number(n[5])] || b[n[5][0]] + ' ' + a[n[5][1]]) : '';
+  return str.trim();
+}
+
+window.onload = initApp;
+</script>
+</body>
+</html>
